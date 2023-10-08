@@ -73,8 +73,7 @@ for stock in intersection_list:
 # json_str = resList.dumps
 
 
-resJson = json.dumps(resList)
-print(resJson)
+
 
     # print(newData)
         # dicList.append(itemData)
@@ -82,3 +81,20 @@ print(resJson)
 # print(dicList)
 # merged_df = pd.concat(dfList, axis=0)
 
+
+# query_iwencai('600071.SH, 300033.SZ 二级行业板块')
+
+result_string = ','.join(intersection_set)
+result_string
+
+dfExtend = query_iwencai(result_string +' 二级行业板块')
+dfExtend
+
+for res in resList:
+    searhRes01 = dfExtend.loc[dfExtend['股票代码'] == res['code'], '股票简称'].iloc[0]
+    res['股票简称'] = searhRes01
+    searhRes02 = dfExtend.loc[dfExtend['股票代码'] == res['code'], '所属同花顺二级行业'].iloc[0]
+    res['二级行业'] = searhRes02
+
+resJson = json.dumps(resList)
+print(resJson)
