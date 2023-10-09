@@ -17,7 +17,7 @@ rowList = []
 for index, row in df1.iterrows():
 #     print(row['收盘价:前复权']) 
 #     print(row['区间最低价:前复权']*1.2)
-    if row['收盘价:前复权'] < row['区间最低价:前复权']*1.15:
+     if float(row['收盘价:前复权']) < float(row['区间最低价:前复权']) * 1.15:
         rowList.append(row)
 #print(rowList)
 len(rowList)
@@ -84,7 +84,7 @@ for stock in intersection_list:
 
 
 
-result_string = ','.join(intersection_set)
+result_string = ','.join(intersection_list)
 result_string
 
 dfExtend = query_iwencai(result_string +' 二级行业板块')
