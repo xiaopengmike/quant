@@ -138,7 +138,4 @@ resList.append(newData)
 resList.append(newData2)
 
 resJson = json.dumps(resList)
-# print(resJson)
-print('---------------')
-print(newData)
-print(newData2)
+print(resJson)
