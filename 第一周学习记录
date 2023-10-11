@@ -1,0 +1,186 @@
+import json
+#交易日
+date_range = get_all_trade_days()
+day = '2023-09-22'
+preDay = str(date_range[date_range.get_loc(day)-1].date())
+nextDay = str(date_range[date_range.get_loc(day)+1].date())
+next2Day = str(date_range[date_range.get_loc(day)+2].date())
+next3Day = str(date_range[date_range.get_loc(day)+3].date())
+followDayList = [nextDay,next2Day,next3Day]
+
+#查询1
+queryInfo1 = "沪深所有非st股票" + "day + 收盘价 前复权， 和前90日区间最低价 前复权"
+df1 = query_iwencai(queryInfo1)
+# df1 = query_iwencai("沪深所有非st股票 20230904 收盘价 前复权， 和前120日区间最低价 前复权")
+
+rowList = []
+for index, row in df1.iterrows():
+#     print(row['收盘价:前复权']) 
+#     print(row['区间最低价:前复权']*1.2)
+     if float(row['收盘价:前复权']) < float(row['区间最低价:前复权']) * 1.15:
+        rowList.append(row)
+#print(rowList)
+len(rowList)
+
+df1 = pd.DataFrame(rowList)
+
+#查询2
+queryInfo2 = "沪深所有非st股票" + day + "成交量大于" + preDay + "两倍," + day + "涨幅>5%"
+df2 = query_iwencai(queryInfo2)
+
+# queryInfo2 = "沪深所有非st股票，" + day + "涨幅>5%"
+df2 = query_iwencai(queryInfo2)
+# df2 = query_iwencai("沪深所有非st股票 20230904 成交量大于 20230903 两倍, 20230904 涨幅>5%")
+
+#查询3
+queryInfo3 =  day + " 5日均线斜率>-10," + day + " 10日均线斜率>-10"
+df3 = query_iwencai(queryInfo3)
+
+stockList1 = df1['股票代码'].tolist()
+stockList2 = df2['股票代码'].tolist()
+stockList3 = df3['股票代码'].tolist()
+
+print(len(stockList1) )
+print(len(stockList2))
+print(len(stockList3))
+
+
+
+set1 = set(stockList1)
+set2 = set(stockList2)
+set3 = set(stockList3)
+
+intersection = set1.intersection(set2, set3)
+# 将交集转换回列表
+intersection_list = list(intersection)
+
+print(intersection_list)
+len(intersection_list)
+
+#后续交易日收盘价
+
+dicList = []
+resList = []
+
+for stock in intersection_list:
+    dfList = []
+    baseCloseDF = get_price(stock, day, day, '1d', ['close'],fq='pre')
+    baseClose = baseCloseDF.iloc[0]['close']
+    
+    for someDay in followDayList:
+        someDayCloseDF = get_price(stock, someDay, someDay, '1d', ['close'],fq='pre')
+        dfList.append(someDayCloseDF)
+    itemData = {'code':stock,'data':dfList}
+    newData = {'code':stock}
+    for item in itemData['data']:
+        # print(item.index[0].strftime('%Y-%m-%d'))
+        # print(item.iloc[0])
+        tradeDate = item.index[0].strftime('%Y-%m-%d')
+    #     # item.iloc[0]
+        zhangDieFu = (item.iloc[0]['close'] - baseClose)/baseClose
+        zhangDieFu = str(round(zhangDieFu * 100,2) )+"%"
+        newData.update({tradeDate: zhangDieFu})
+    resList.append(newData)
+
+
+
+result_string = ','.join(intersection_list)
+result_string
+
+dfExtend = query_iwencai(result_string +' 二级行业板块')
+dfExtend
+
+for res in resList:
+    searhRes01 = dfExtend.loc[dfExtend['股票代码'] == res['code'], '股票简称'].iloc[0]
+    res['股票简称'] = searhRes01
+    searhRes02 = dfExtend.loc[dfExtend['股票代码'] == res['code'], '所属同花顺二级行业'].iloc[0]
+    res['二级行业'] = searhRes02
+
+
+
+#
+sum = 0
+countAbove0 = 0
+for res in resList:
+    percentage_decimal = float(res[nextDay].strip('%'))/100
+    sum = sum + percentage_decimal
+    if percentage_decimal>0:
+        countAbove0 = countAbove0 + 1
+
+average1 = sum/len(resList)
+winRate1 = countAbove0/len(resList)
+
+sum = 0
+countAbove0 = 0
+for res in resList:
+    percentage_decimal = float(res[next2Day].strip('%'))/100
+    sum = sum + percentage_decimal
+    if percentage_decimal>0:
+        countAbove0 = countAbove0 + 1
+
+average2 = sum/len(resList)
+winRate2 = countAbove0/len(resList)
+
+sum = 0
+countAbove0 = 0
+for res in resList:
+    percentage_decimal = float(res[next3Day].strip('%'))/100
+    sum = sum + percentage_decimal
+    if percentage_decimal>0:
+        countAbove0 = countAbove0 + 1
+
+average3 = sum/len(resList)
+winRate3 = countAbove0/len(resList)
+
+newData = {nextDay:average1,next2Day:average2,next3Day:average3}
+newData2 = {nextDay:winRate1,next2Day:winRate2,next3Day:winRate3}
+resList.append(newData)
+resList.append(newData2)
+
+resJson = json.dumps(resList)
+print(resJson)
+
+
+
+
+
+
+
+
+1. 通过导入`json`库，准备用于处理JSON数据的工具。
+
+2. 获取一组日期范围，可能代表交易日。
+
+3. 定义一个特定日期（'2023-09-22'）以便后续使用。
+
+4. 计算前一交易日、下一交易日、后两个交易日和后三个交易日的日期。
+
+5. 创建一个包含这些日期的列表。
+
+6. 构建查询1：从沪深股市中筛选非ST（特别处理）股票，并获取特定日期的股票收盘价前复权和前90日区间最低价前复权。
+
+7. 执行查询1并将结果存储在名为`df1`的DataFrame中。
+
+8. 创建一个空列表`rowList`，用于存储满足条件的股票数据。
+
+9. 遍历`df1` DataFrame中的每一行，检查是否符合条件，将符合条件的数据添加到`rowList`中。
+
+10. 将`rowList`中的数据转换为新的DataFrame `df1`，仅包含满足条件的股票数据。
+
+11. 构建查询2：从沪深股市中筛选非ST股票，并获取特定日期的成交量大于前一交易日两倍且涨幅大于5%的股票数据。
+
+12. 执行查询2，并将结果存储在名为`df2`的DataFrame中。
+
+13. 提取`df1`和`df2`中的股票代码列表。
+
+14. 创建三个集合，分别存储`df1`、`df2`和`df3`中的股票代码。
+
+15. 计算这三个集合的交集，即同时出现在这三个DataFrame中的股票代码。
+
+16. 获取这些股票代码的信息，包括名称和行业信息，并将其存储在`dfExtend`中。
+
+17. 遍历这些股票代码，计算并记录它们在接下来几个交易日的表现。
+
+18. 计算股票代码的平均涨幅和涨幅大于0的股票比例，并记录到`resList`中。
+
+19. 将`resList`中的数据转换为JSON格式，并打印出来。
