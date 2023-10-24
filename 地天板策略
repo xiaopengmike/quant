@@ -1,0 +1,33 @@
+import pandas
+import numpy
+import datetime
+from datetime import timedelta
+
+def limit_down_to_up(start_date, end_date):
+    dataframe=pd.DataFrame()
+    date_range=get_trade_days(start_date, end_date)
+    target_date=datetime.datetime.strptime(end_date,'%Y-%m-%d')
+    end_date_next=(target_date+ timedelta(days=3)).strftime("%Y-%m-%d")
+    date_range_next=get_trade_days(start_date, end_date_next)
+    i=0
+    for current_date in date_range: 
+        i=i+1
+        current_date_str=current_date.strftime("%Y-%m-%d")
+        df=query_iwencai(current_date_str+" 地天板")
+        if df.empty==False:
+            df['交易日期']=current_date
+            dataframe_quote=pd.DataFrame()
+            for ticker in df['股票代码']:
+                df_quote_1d=get_price(ticker,None,date_range_next[i],'1d',['quote_rate'],True,None,1)
+                df_quote_1d['股票代码']=ticker
+                dataframe_quote=dataframe_quote.append(df_quote_1d,ignore_index=True)
+            df=pd.merge(df,dataframe_quote,on='股票代码')
+            dataframe=dataframe.append(df,ignore_index=True)
+    dataframe['次日涨跌幅']=dataframe['quote_rate']
+    dataframe.drop('quote_rate', axis=1)
+    order=['交易日期','股票代码','股票简称','涨停类型','次日涨跌幅']
+    dataframe=dataframe.reindex(columns=order)
+    return dataframe
+df=limit_down_to_up("2023-01-01", "2023-10-20")
+df
+df.to_excel('2023年地天板.xlsx',sheet_name='Sheet1')
