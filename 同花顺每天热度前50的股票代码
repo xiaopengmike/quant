@@ -1,0 +1,29 @@
+import pandas as pd
+
+start_date = "2023-01-01"
+end_date = "2023-10-23"
+date_range = pd.date_range(start=start_date, end=end_date)
+date_range_str = date_range.strftime("%Y-%m-%d")  # 将日期转换为字符串形式
+
+# 创建一个空列表，用于存储拼接后的查询字符串
+queries = []
+
+# 遍历日期范围，并将日期与 " 热度排行" 拼接后加入查询列表
+for date in date_range_str:
+    query = date + " 热度排行"
+    queries.append(query)
+
+# 现在，queries 列表中包含了日期与 " 热度排行" 拼接后的查询字符串
+# 创建一个空的 pandas DataFrame，用于存储所有查询结果
+df_all = pd.DataFrame()
+
+# 您可以遍历这个列表，将每个查询传递给 query_iwencai 函数
+for query in queries:
+    df = query_iwencai(query)
+    # 调整 df 结果以适应您的数据合并需求
+    # 添加日期列，以分辨每一行数据是哪一天的
+    df['日期'] = pd.to_datetime(query.split()[0])
+    # 将 df 附加到 df_all
+    df_all = pd.concat([df_all, df])
+# 这样 df_all 就包括了所有日期的查询结果，按日期分开
+df_all.to_excel("query_results.xlsx", index=False)
