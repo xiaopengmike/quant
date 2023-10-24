@@ -1,0 +1,73 @@
+import jqdatasdk as jq
+import pandas as pd
+from datetime import datetime, timedelta
+# 初始化连接
+jq.auth('15970542006', 'Ph20001010')  # 请使用你的聚宽用户名和密码
+
+def leading_stocks_on_day(a, N):
+    """
+    查询以第a天为基准前N天中涨幅最大的前五只股票。
+    :param a: 第a天的日期，格式为 "YYYY-MM-DD"
+    :param N: 前N天
+    :return: 涨幅最大的前五只股票代码及其涨跌幅
+    """
+    # 计算开始和结束日期
+    start_date1 = jq.get_trade_days(end_date=a, count=N)[0]
+    # 假设你输入一个日期，例如'start_date'
+    date_string = start_date1
+    date = datetime.strptime(date_string, '%Y-%m-%d')
+
+    # 计算前一天的日期
+    previous_day = date - timedelta(days=1)
+
+   # 将前一天的日期转换为字符串
+    start_date = previous_day.strftime('%Y-%m-%d')
+    end_date = jq.get_trade_days(end_date=a, count=1)[0]
+
+    all_stocks = list(jq.get_all_securities(types=['stock'], date=start_date).index)
+    stock_prices = jq.get_price(all_stocks, start_date=start_date, end_date=end_date, fields=['close'])
+    df = stock_prices
+    # 将时间列转换为日期时间格式
+    df['time'] = pd.to_datetime(df['time'])
+
+    # 根据股票代码分组
+    grouped = df.groupby('code')
+
+    # 创建一个新的DataFrame来存储结果
+    result_df = pd.DataFrame()
+
+    # 针对每个股票计算涨跌幅，并添加到结果DataFrame
+    for code, group in grouped:
+      group['price_change'] = group['close'].diff()  # 计算每天价格的变化
+      group['percentage_change'] = (group['price_change'] / group['close'].shift(1)) * 100  # 计算涨跌幅
+      result_df = pd.concat([result_df, group])
+
+    # 重置索引以获得适当的顺序
+    result_df = result_df.reset_index(drop=True)
+
+   # 将时间列转换为日期时间格式
+    result_df['time'] = pd.to_datetime(result_df['time'])
+
+    # 根据日期（time）分组
+    grouped1 = result_df.groupby('time')
+
+    # 创建一个新的DataFrame来存储结果
+    sorted_df = pd.DataFrame()
+
+     # 针对每一天的数据进行排序
+    for date, group in grouped1:
+       sorted_group = group.sort_values(by='percentage_change', ascending=False)
+       top_5_group = sorted_group.head(5)
+       sorted_df = pd.concat([sorted_df, top_5_group])
+    # 删除percentage_change为NaN的行
+    sorted_df1 = sorted_df.dropna(subset=['percentage_change'])
+    # 将DataFrame转换为JSON格式
+    json_result = sorted_df1.to_json(orient='records')
+
+    # 打印JSON格式的结果
+    print(json_result)
+
+# 示例
+a = "2023-6-17"
+N = 5
+result = leading_stocks_on_day(a, N)
