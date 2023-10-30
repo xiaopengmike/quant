@@ -1,0 +1,7 @@
+import pandas
+import numpy
+import datetime
+from datetime import timedelta
+input_date_str = input("请输入日期 (YYYY-MM-DD): ")
+df = query_iwencai(input_date_str + " 9点30分到9点40分" + " 涨跌幅小于等于5%" + " 且前三天股票累积涨跌幅小于百分之15" + " 单只股票成交金额前三的股票" + " 不包括市值大于3000亿的公司" + " 五日均线的斜率大于负10" + " 后一日涨跌幅" + "后两日涨跌幅")
+df.to_excel("query_results.xlsx", index=False)
